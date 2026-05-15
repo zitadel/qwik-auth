@@ -72,7 +72,7 @@ export async function getSession(
   const { status } = response;
   const data = (await response.json()) as Record<string, unknown> | null;
   if (!data || !Object.keys(data).length) return null;
-  if (status === 200) return data as Session;
+  if (status === 200) return data as unknown as Session;
   throw new Error((data as { message?: string }).message ?? 'Session error');
 }
 
