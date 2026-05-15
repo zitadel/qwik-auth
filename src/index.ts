@@ -1,0 +1,165 @@
+import {
+  Auth,
+  type AuthConfig,
+  setEnvDefaults,
+  createActionURL,
+} from '@auth/core';
+import type { Session } from '@auth/core/types';
+
+export { AuthError, CredentialsSignin } from '@auth/core/errors';
+export type {
+  Account,
+  DefaultSession,
+  Profile,
+  Session,
+  User,
+} from '@auth/core/types';
+
+/**
+ * Qwik City RequestEventCommon-compatible type.
+ */
+export type RequestEventCommon = {
+  request: Request;
+  url: URL;
+  env: {
+    get(key: string): string | undefined;
+  };
+  send(statusCode: number, body: string): void;
+  redirect(statusCode: number, url: string): never;
+  headers: Headers;
+};
+
+/**
+ * Auth.js configuration for Qwik applications.
+ */
+export type QwikAuthConfig = Omit<AuthConfig, 'raw'>;
+
+/**
+ * A function that receives the request event and returns Auth.js config.
+ */
+export type QwikAuthConfigFactory = (
+  event: RequestEventCommon,
+) => QwikAuthConfig;
+
+/**
+ * Retrieves the current session from the request.
+ *
+ * @param request - The current request object
+ * @param config - Auth.js configuration
+ * @returns The session object or null
+ */
+export async function getSession(
+  request: Request,
+  config: QwikAuthConfig,
+): Promise<Session | null> {
+  setEnvDefaults(process.env, config);
+
+  const url = createActionURL(
+    'session',
+    new URL(request.url).protocol.slice(0, -1) as 'http' | 'https',
+    new Headers(request.headers),
+    process.env,
+    config,
+  );
+
+  const response = await Auth(
+    new Request(url, {
+      headers: { cookie: request.headers.get('cookie') ?? '' },
+    }),
+    config,
+  );
+
+  const { status } = response;
+  const data = (await response.json()) as Record<string, unknown> | null;
+  if (!data || !Object.keys(data).length) return null;
+  if (status === 200) return data as Session;
+  throw new Error((data as { message?: string }).message ?? 'Session error');
+}
+
+/**
+ * Creates a QwikAuth handler set from a config factory function.
+ *
+ * Returns `{ onRequest, useSession, useSignIn, useSignOut }` that should be
+ * exported from your `plugin@auth.ts` route.
+ *
+ * @param configFactory - Function that receives the Qwik request event and returns Auth.js config
+ *
+ * @example
+ * ```ts
+ * // src/routes/plugin@auth.ts
+ * import { QwikAuth$ } from '@zitadel/qwik-auth';
+ * import { getAuthConfig } from '~/lib/auth';
+ *
+ * export const { onRequest, useSession, useSignIn, useSignOut } = QwikAuth$(
+ *   (event) => getAuthConfig((key) => event.env.get(`VITE_${key}`))
+ * );
+ * ```
+ */
+export function QwikAuth$(configFactory: QwikAuthConfigFactory): {
+  onRequest: (event: RequestEventCommon) => Promise<void>;
+  useSession: () => Promise<Session | null>;
+  useSignIn: (
+    provider?: string,
+    options?: { callbackUrl?: string },
+  ) => Promise<void>;
+  useSignOut: (options?: { callbackUrl?: string }) => Promise<void>;
+} {
+  async function onRequest(event: RequestEventCommon): Promise<void> {
+    const { url, request } = event;
+
+    const config = configFactory(event);
+    setEnvDefaults(process.env, config);
+    const basePath = (config.basePath ?? '/api/auth').replace(/\/$/, '');
+
+    if (!url.pathname.startsWith(basePath + '/')) {
+      return;
+    }
+
+    const response = await Auth(request, config);
+    event.send(response.status, await response.text());
+  }
+
+  async function useSession(): Promise<Session | null> {
+    return null;
+  }
+
+  async function useSignIn(
+    provider?: string,
+    options: { callbackUrl?: string } = {},
+  ): Promise<void> {
+    const basePath = '/api/auth';
+    const params = new URLSearchParams();
+    if (options.callbackUrl) {
+      params.set('callbackUrl', options.callbackUrl);
+    }
+    const paramStr = params.toString();
+    const url = provider
+      ? `${basePath}/signin/${provider}${paramStr ? `?${paramStr}` : ''}`
+      : `${basePath}/signin${paramStr ? `?${paramStr}` : ''}`;
+    if (typeof window !== 'undefined') {
+      window.location.href = url;
+    }
+  }
+
+  async function useSignOut(
+    options: { callbackUrl?: string } = {},
+  ): Promise<void> {
+    const basePath = '/api/auth';
+    const params = new URLSearchParams();
+    if (options.callbackUrl) {
+      params.set('callbackUrl', options.callbackUrl);
+    }
+    const paramStr = params.toString();
+    const url = `${basePath}/signout${paramStr ? `?${paramStr}` : ''}`;
+    if (typeof window !== 'undefined') {
+      window.location.href = url;
+    }
+  }
+
+  return {
+    onRequest,
+    useSession,
+    useSignIn,
+    useSignOut,
+  };
+}
