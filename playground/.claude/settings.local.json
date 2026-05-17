@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh pr list --search \"author:app/dependabot\" --state open --json number,title,url)",
+      "Bash(ls devbox* 2>/dev/null || echo \"No devbox config found\")",
+      "Bash(gh pr view 26 --json body,title --jq '.title + \"\\\\n\\\\n\" + .body' 2>&1 | head -200)",
+      "Bash(gh pr view 8 --json body,title --jq '.title + \"\\\\n\\\\n\" + .body' 2>&1 | head -200)",
+      "Bash(gh pr diff 8 --name-only)",
+      "Bash(gh pr diff 26 --name-only)",
+      "Bash(gh pr diff 8 2>&1 | head -300)",
+      "Bash(gh pr diff 26 -- package.json 2>&1)",
+      "Bash(gh pr diff 26 2>&1 | head -100)",
+      "Bash(devbox run -- npm audit 2>&1)",
+      "Bash(devbox run -- npm audit fix 2>&1)",
+      "Bash(devbox run -- node -e \"const pkg = require\\('./package.json'\\); console.log\\(JSON.stringify\\(pkg.overrides || 'none'\\)\\)\" 2>&1)",
+      "Bash(devbox run -- git diff --stat 2>&1)"
+    ]
+  }
+}

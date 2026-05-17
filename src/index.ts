@@ -97,12 +97,12 @@ export async function getSession(
  */
 export function QwikAuth$(configFactory: QwikAuthConfigFactory): {
   onRequest: (event: RequestEventCommon) => Promise<void>;
-  useSession: () => Promise<Session | null>;
+  useSession: (event: RequestEventCommon) => Promise<Session | null>;
   useSignIn: (
     provider?: string,
-    options?: { callbackUrl?: string },
+    options?: { redirectTo?: string },
   ) => Promise<void>;
-  useSignOut: (options?: { callbackUrl?: string }) => Promise<void>;
+  useSignOut: (options?: { redirectTo?: string }) => Promise<void>;
 } {
   async function onRequest(event: RequestEventCommon): Promise<void> {
     const { url, request } = event;
@@ -119,18 +119,21 @@ export function QwikAuth$(configFactory: QwikAuthConfigFactory): {
     event.send(response.status, await response.text());
   }
 
-  async function useSession(): Promise<Session | null> {
-    return null;
+  async function useSession(
+    event: RequestEventCommon,
+  ): Promise<Session | null> {
+    const config = configFactory(event);
+    return getSession(event.request, config);
   }
 
   async function useSignIn(
     provider?: string,
-    options: { callbackUrl?: string } = {},
+    options: { redirectTo?: string } = {},
   ): Promise<void> {
     const basePath = '/api/auth';
     const params = new URLSearchParams();
-    if (options.callbackUrl) {
-      params.set('callbackUrl', options.callbackUrl);
+    if (options.redirectTo) {
+      params.set('callbackUrl', options.redirectTo);
     }
     const paramStr = params.toString();
     const url = provider
@@ -142,12 +145,12 @@ export function QwikAuth$(configFactory: QwikAuthConfigFactory): {
   }
 
   async function useSignOut(
-    options: { callbackUrl?: string } = {},
+    options: { redirectTo?: string } = {},
   ): Promise<void> {
     const basePath = '/api/auth';
     const params = new URLSearchParams();
-    if (options.callbackUrl) {
-      params.set('callbackUrl', options.callbackUrl);
+    if (options.redirectTo) {
+      params.set('callbackUrl', options.redirectTo);
     }
     const paramStr = params.toString();
     const url = `${basePath}/signout${paramStr ? `?${paramStr}` : ''}`;

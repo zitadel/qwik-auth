@@ -1,0 +1,47 @@
+{
+  "name": "playground-qwik-auth",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "qwik build",
+    "build.client": "vite build",
+    "build.preview": "vite build --ssr src/entry.preview.tsx",
+    "build.types": "tsc --incremental --noEmit",
+    "dev": "vite --mode ssr --port ${PORT:-3000}",
+    "dev.debug": "node --inspect-brk ./node_modules/vite/bin/vite.js --mode ssr --force",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "preview": "qwik build preview && vite preview --open",
+    "qwik": "qwik",
+    "start": "vite --mode ssr"
+  },
+  "devDependencies": {
+    "@builder.io/qwik": "^1.19.1",
+    "@builder.io/qwik-city": "^1.19.2",
+    "@eslint/js": "^9.38.0",
+    "@tailwindcss/vite": "^4.1.11",
+    "@types/node": "^22",
+    "@zitadel/qwik-auth": "file:../",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-qwik": "^1.15.0",
+    "globals": "^16.3.0",
+    "prettier": "^3.6.2",
+    "prettier-plugin-tailwindcss": "^0.6.14",
+    "tailwindcss": "^4.0.0",
+    "typescript": "~5.9.2",
+    "typescript-eslint": "^8.20.0",
+    "typescript-plugin-css-modules": "^5.2.0",
+    "vite": "^7.3.2",
+    "vite-tsconfig-paths": "^4.2.1"
+  },
+  "dependencies": {
+    "@auth/core": "^0.41.0"
+  }
+}
