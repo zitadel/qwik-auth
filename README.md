@@ -47,7 +47,7 @@ npm install @zitadel/qwik-auth @auth/core
 
 ## Usage
 
-To use this integration, call `QwikAuth$()` with a config factory function
+To use this integration, call `QwikAuth$()` with a plain Auth.js config object
 and export the resulting `onRequest`, `useSession`, `useSignIn`, and
 `useSignOut` from a `plugin@auth.ts` route file.
 
@@ -81,7 +81,7 @@ import { QwikAuth$ } from '@zitadel/qwik-auth';
 import { getAuthConfig } from '~/lib/auth';
 
 export const { onRequest, useSession, useSignIn, useSignOut } = QwikAuth$(
-  (event) => getAuthConfig((key) => event.env.get(`VITE_${key}`)),
+  getAuthConfig((key) => process.env[key])
 );
 ```
 
@@ -139,7 +139,7 @@ import { getAuthConfig } from '~/lib/auth';
 export const useProfileData = routeLoader$(async (event) => {
   const session = await getSession(
     event.request,
-    getAuthConfig((key) => event.env.get(`VITE_${key}`)),
+    getAuthConfig((key) => process.env[key]),
   );
   if (!session) throw event.redirect(302, '/');
   return session;
@@ -161,13 +161,13 @@ export function getAuthConfig(env: (key: string) => string | undefined): QwikAut
   return {
     providers: [
       Zitadel({
-        clientId: env('ZITADEL_CLIENT_ID'),
-        clientSecret: env('ZITADEL_CLIENT_SECRET'),
-        issuer: env('ZITADEL_DOMAIN'),
+        clientId: env('ZITADEL_CLIENT_ID') ?? '',
+        clientSecret: env('ZITADEL_CLIENT_SECRET') ?? '',
+        issuer: env('ZITADEL_DOMAIN') ?? '',
       }),
       Google({
-        clientId: env('GOOGLE_CLIENT_ID'),
-        clientSecret: env('GOOGLE_CLIENT_SECRET'),
+        clientId: env('GOOGLE_CLIENT_ID') ?? '',
+        clientSecret: env('GOOGLE_CLIENT_SECRET') ?? '',
       }),
     ],
     secret: env('AUTH_SECRET'),
@@ -194,9 +194,10 @@ export function getAuthConfig(env: (key: string) => string | undefined): QwikAut
 
 ## Known Issues
 
-- **Environment Variables:** Qwik City exposes environment variables via
-  `event.env.get()`. Client-side env vars must be prefixed with `VITE_`. Use
-  the config factory pattern to thread env access through correctly.
+- **Environment Variables:** `QwikAuth$` reads environment variables via
+  `process.env` at module initialization time. Client-side env vars must be
+  prefixed with `VITE_`. Pass secrets as config properties to keep them
+  server-side only.
 - **Environment Configuration:** The integration relies on `AUTH_SECRET` and,
   in many hosting scenarios, `AUTH_TRUST_HOST`. Ensure these are correctly set
   in your environment for production.

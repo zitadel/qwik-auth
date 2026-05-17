@@ -29,14 +29,11 @@ describe('Qwik Auth Package', () => {
     });
   });
 
-  describe('QwikAuth$ factory return shape', () => {
-    it('should return an object when called with a config factory', async () => {
+  describe('QwikAuth$ return shape', () => {
+    it('should return an object when called with a plain config', async () => {
       const { QwikAuth$ } = await import('../src/index.js');
 
-      const result = QwikAuth$(() => ({
-        providers: [],
-        secret: 'test-secret',
-      }));
+      const result = QwikAuth$({ providers: [], secret: 'test-secret' });
 
       expect(result).toBeDefined();
       expect(typeof result).toBe('object');
@@ -45,10 +42,7 @@ describe('Qwik Auth Package', () => {
     it('should return onRequest as a function', async () => {
       const { QwikAuth$ } = await import('../src/index.js');
 
-      const { onRequest } = QwikAuth$(() => ({
-        providers: [],
-        secret: 'test-secret',
-      }));
+      const { onRequest } = QwikAuth$({ providers: [], secret: 'test-secret' });
 
       expect(typeof onRequest).toBe('function');
     });
@@ -56,10 +50,7 @@ describe('Qwik Auth Package', () => {
     it('should return useSession as a function that accepts an event', async () => {
       const { QwikAuth$ } = await import('../src/index.js');
 
-      const { useSession } = QwikAuth$(() => ({
-        providers: [],
-        secret: 'test-secret',
-      }));
+      const { useSession } = QwikAuth$({ providers: [], secret: 'test-secret' });
 
       expect(typeof useSession).toBe('function');
       expect(useSession.length).toBe(1);
@@ -68,10 +59,7 @@ describe('Qwik Auth Package', () => {
     it('should return useSignIn as a function', async () => {
       const { QwikAuth$ } = await import('../src/index.js');
 
-      const { useSignIn } = QwikAuth$(() => ({
-        providers: [],
-        secret: 'test-secret',
-      }));
+      const { useSignIn } = QwikAuth$({ providers: [], secret: 'test-secret' });
 
       expect(typeof useSignIn).toBe('function');
     });
@@ -79,10 +67,7 @@ describe('Qwik Auth Package', () => {
     it('should return useSignOut as a function', async () => {
       const { QwikAuth$ } = await import('../src/index.js');
 
-      const { useSignOut } = QwikAuth$(() => ({
-        providers: [],
-        secret: 'test-secret',
-      }));
+      const { useSignOut } = QwikAuth$({ providers: [], secret: 'test-secret' });
 
       expect(typeof useSignOut).toBe('function');
     });
@@ -92,10 +77,7 @@ describe('Qwik Auth Package', () => {
     it('should navigate to /api/auth/signin/{provider} when provider is given', async () => {
       const { QwikAuth$ } = await import('../src/index.js');
 
-      const { useSignIn } = QwikAuth$(() => ({
-        providers: [],
-        secret: 'test-secret',
-      }));
+      const { useSignIn } = QwikAuth$({ providers: [], secret: 'test-secret' });
 
       const mockWindow = { location: { href: '' } };
       (global as Record<string, unknown>).window = mockWindow;
@@ -110,10 +92,7 @@ describe('Qwik Auth Package', () => {
     it('should navigate to /api/auth/signin when no provider is given', async () => {
       const { QwikAuth$ } = await import('../src/index.js');
 
-      const { useSignIn } = QwikAuth$(() => ({
-        providers: [],
-        secret: 'test-secret',
-      }));
+      const { useSignIn } = QwikAuth$({ providers: [], secret: 'test-secret' });
 
       const mockWindow = { location: { href: '' } };
       (global as Record<string, unknown>).window = mockWindow;
@@ -128,10 +107,7 @@ describe('Qwik Auth Package', () => {
     it('should append callbackUrl query param when redirectTo is provided', async () => {
       const { QwikAuth$ } = await import('../src/index.js');
 
-      const { useSignIn } = QwikAuth$(() => ({
-        providers: [],
-        secret: 'test-secret',
-      }));
+      const { useSignIn } = QwikAuth$({ providers: [], secret: 'test-secret' });
 
       const mockWindow = { location: { href: '' } };
       (global as Record<string, unknown>).window = mockWindow;
@@ -148,14 +124,49 @@ describe('Qwik Auth Package', () => {
     it('should not navigate when window is undefined', async () => {
       const { QwikAuth$ } = await import('../src/index.js');
 
-      const { useSignIn } = QwikAuth$(() => ({
-        providers: [],
-        secret: 'test-secret',
-      }));
+      const { useSignIn } = QwikAuth$({ providers: [], secret: 'test-secret' });
 
       delete (global as Record<string, unknown>).window;
 
       await expect(useSignIn('zitadel')).resolves.toBeUndefined();
+    });
+
+    it('should respect custom basePath', async () => {
+      const { QwikAuth$ } = await import('../src/index.js');
+
+      const { useSignIn } = QwikAuth$({
+        providers: [],
+        secret: 'test-secret',
+        basePath: '/my-auth',
+      });
+
+      const mockWindow = { location: { href: '' } };
+      (global as Record<string, unknown>).window = mockWindow;
+
+      await useSignIn('zitadel');
+
+      expect(mockWindow.location.href).toBe('/my-auth/signin/zitadel');
+
+      delete (global as Record<string, unknown>).window;
+    });
+
+    it('should strip trailing slash from basePath', async () => {
+      const { QwikAuth$ } = await import('../src/index.js');
+
+      const { useSignIn } = QwikAuth$({
+        providers: [],
+        secret: 'test-secret',
+        basePath: '/my-auth/',
+      });
+
+      const mockWindow = { location: { href: '' } };
+      (global as Record<string, unknown>).window = mockWindow;
+
+      await useSignIn('zitadel');
+
+      expect(mockWindow.location.href).toBe('/my-auth/signin/zitadel');
+
+      delete (global as Record<string, unknown>).window;
     });
   });
 
@@ -163,10 +174,7 @@ describe('Qwik Auth Package', () => {
     it('should navigate to /api/auth/signout', async () => {
       const { QwikAuth$ } = await import('../src/index.js');
 
-      const { useSignOut } = QwikAuth$(() => ({
-        providers: [],
-        secret: 'test-secret',
-      }));
+      const { useSignOut } = QwikAuth$({ providers: [], secret: 'test-secret' });
 
       const mockWindow = { location: { href: '' } };
       (global as Record<string, unknown>).window = mockWindow;
@@ -181,10 +189,7 @@ describe('Qwik Auth Package', () => {
     it('should append callbackUrl query param when redirectTo is provided', async () => {
       const { QwikAuth$ } = await import('../src/index.js');
 
-      const { useSignOut } = QwikAuth$(() => ({
-        providers: [],
-        secret: 'test-secret',
-      }));
+      const { useSignOut } = QwikAuth$({ providers: [], secret: 'test-secret' });
 
       const mockWindow = { location: { href: '' } };
       (global as Record<string, unknown>).window = mockWindow;
@@ -201,14 +206,30 @@ describe('Qwik Auth Package', () => {
     it('should not navigate when window is undefined', async () => {
       const { QwikAuth$ } = await import('../src/index.js');
 
-      const { useSignOut } = QwikAuth$(() => ({
-        providers: [],
-        secret: 'test-secret',
-      }));
+      const { useSignOut } = QwikAuth$({ providers: [], secret: 'test-secret' });
 
       delete (global as Record<string, unknown>).window;
 
       await expect(useSignOut()).resolves.toBeUndefined();
+    });
+
+    it('should respect custom basePath', async () => {
+      const { QwikAuth$ } = await import('../src/index.js');
+
+      const { useSignOut } = QwikAuth$({
+        providers: [],
+        secret: 'test-secret',
+        basePath: '/my-auth',
+      });
+
+      const mockWindow = { location: { href: '' } };
+      (global as Record<string, unknown>).window = mockWindow;
+
+      await useSignOut();
+
+      expect(mockWindow.location.href).toBe('/my-auth/signout');
+
+      delete (global as Record<string, unknown>).window;
     });
   });
 

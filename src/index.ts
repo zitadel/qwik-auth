@@ -35,13 +35,6 @@ export type RequestEventCommon = {
 export type QwikAuthConfig = Omit<AuthConfig, 'raw'>;
 
 /**
- * A function that receives the request event and returns Auth.js config.
- */
-export type QwikAuthConfigFactory = (
-  event: RequestEventCommon,
-) => QwikAuthConfig;
-
-/**
  * Retrieves the current session from the request.
  *
  * @param request - The current request object
@@ -53,6 +46,7 @@ export async function getSession(
   config: QwikAuthConfig,
 ): Promise<Session | null> {
   setEnvDefaults(process.env, config);
+  config.basePath ??= '/api/auth';
 
   const url = createActionURL(
     'session',
@@ -77,12 +71,12 @@ export async function getSession(
 }
 
 /**
- * Creates a QwikAuth handler set from a config factory function.
+ * Creates a QwikAuth handler set from a plain Auth.js config object.
  *
  * Returns `{ onRequest, useSession, useSignIn, useSignOut }` that should be
  * exported from your `plugin@auth.ts` route.
  *
- * @param configFactory - Function that receives the Qwik request event and returns Auth.js config
+ * @param config - Auth.js configuration object
  *
  * @example
  * ```ts
@@ -91,11 +85,11 @@ export async function getSession(
  * import { getAuthConfig } from '~/lib/auth';
  *
  * export const { onRequest, useSession, useSignIn, useSignOut } = QwikAuth$(
- *   (event) => getAuthConfig((key) => event.env.get(`VITE_${key}`))
+ *   getAuthConfig((key) => process.env[key])
  * );
  * ```
  */
-export function QwikAuth$(configFactory: QwikAuthConfigFactory): {
+export function QwikAuth$(config: QwikAuthConfig): {
   onRequest: (event: RequestEventCommon) => Promise<void>;
   useSession: (event: RequestEventCommon) => Promise<Session | null>;
   useSignIn: (
@@ -104,25 +98,21 @@ export function QwikAuth$(configFactory: QwikAuthConfigFactory): {
   ) => Promise<void>;
   useSignOut: (options?: { redirectTo?: string }) => Promise<void>;
 } {
+  config.basePath ??= '/api/auth';
+  setEnvDefaults(process.env, config);
+  const basePath = config.basePath.replace(/\/$/, '');
+
   async function onRequest(event: RequestEventCommon): Promise<void> {
-    const { url, request } = event;
-
-    const config = configFactory(event);
-    setEnvDefaults(process.env, config);
-    const basePath = (config.basePath ?? '/api/auth').replace(/\/$/, '');
-
-    if (!url.pathname.startsWith(basePath + '/')) {
+    if (!event.url.pathname.startsWith(basePath + '/')) {
       return;
     }
-
-    const response = await Auth(request, config);
+    const response = await Auth(event.request, config);
     event.send(response.status, await response.text());
   }
 
   async function useSession(
     event: RequestEventCommon,
   ): Promise<Session | null> {
-    const config = configFactory(event);
     return getSession(event.request, config);
   }
 
@@ -130,7 +120,6 @@ export function QwikAuth$(configFactory: QwikAuthConfigFactory): {
     provider?: string,
     options: { redirectTo?: string } = {},
   ): Promise<void> {
-    const basePath = '/api/auth';
     const params = new URLSearchParams();
     if (options.redirectTo) {
       params.set('callbackUrl', options.redirectTo);
@@ -147,7 +136,6 @@ export function QwikAuth$(configFactory: QwikAuthConfigFactory): {
   async function useSignOut(
     options: { redirectTo?: string } = {},
   ): Promise<void> {
-    const basePath = '/api/auth';
     const params = new URLSearchParams();
     if (options.redirectTo) {
       params.set('callbackUrl', options.redirectTo);
