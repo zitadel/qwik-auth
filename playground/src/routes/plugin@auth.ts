@@ -38,6 +38,7 @@ const config = {
     }),
   ],
   session: { strategy: 'jwt' as const },
+  secret: process.env['AUTH_SECRET']!,
   trustHost: true,
   callbacks: {
     redirect({ url, baseUrl }: { url: string; baseUrl: string }) {

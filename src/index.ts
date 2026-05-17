@@ -45,8 +45,8 @@ export async function getSession(
   request: Request,
   config: QwikAuthConfig,
 ): Promise<Session | null> {
-  setEnvDefaults(process.env, config);
   config.basePath ??= '/api/auth';
+  setEnvDefaults(process.env, config);
 
   const url = createActionURL(
     'session',
