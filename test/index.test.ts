@@ -50,7 +50,10 @@ describe('Qwik Auth Package', () => {
     it('should return useSession as a function that accepts an event', async () => {
       const { QwikAuth$ } = await import('../src/index.js');
 
-      const { useSession } = QwikAuth$({ providers: [], secret: 'test-secret' });
+      const { useSession } = QwikAuth$({
+        providers: [],
+        secret: 'test-secret',
+      });
 
       expect(typeof useSession).toBe('function');
       expect(useSession.length).toBe(1);
@@ -67,7 +70,10 @@ describe('Qwik Auth Package', () => {
     it('should return useSignOut as a function', async () => {
       const { QwikAuth$ } = await import('../src/index.js');
 
-      const { useSignOut } = QwikAuth$({ providers: [], secret: 'test-secret' });
+      const { useSignOut } = QwikAuth$({
+        providers: [],
+        secret: 'test-secret',
+      });
 
       expect(typeof useSignOut).toBe('function');
     });
@@ -174,7 +180,10 @@ describe('Qwik Auth Package', () => {
     it('should navigate to /api/auth/signout', async () => {
       const { QwikAuth$ } = await import('../src/index.js');
 
-      const { useSignOut } = QwikAuth$({ providers: [], secret: 'test-secret' });
+      const { useSignOut } = QwikAuth$({
+        providers: [],
+        secret: 'test-secret',
+      });
 
       const mockWindow = { location: { href: '' } };
       (global as Record<string, unknown>).window = mockWindow;
@@ -189,7 +198,10 @@ describe('Qwik Auth Package', () => {
     it('should append callbackUrl query param when redirectTo is provided', async () => {
       const { QwikAuth$ } = await import('../src/index.js');
 
-      const { useSignOut } = QwikAuth$({ providers: [], secret: 'test-secret' });
+      const { useSignOut } = QwikAuth$({
+        providers: [],
+        secret: 'test-secret',
+      });
 
       const mockWindow = { location: { href: '' } };
       (global as Record<string, unknown>).window = mockWindow;
@@ -206,7 +218,10 @@ describe('Qwik Auth Package', () => {
     it('should not navigate when window is undefined', async () => {
       const { QwikAuth$ } = await import('../src/index.js');
 
-      const { useSignOut } = QwikAuth$({ providers: [], secret: 'test-secret' });
+      const { useSignOut } = QwikAuth$({
+        providers: [],
+        secret: 'test-secret',
+      });
 
       delete (global as Record<string, unknown>).window;
 
