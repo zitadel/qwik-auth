@@ -35,11 +35,19 @@ export type RequestEventCommon = {
 export type QwikAuthConfig = Omit<AuthConfig, 'raw'>;
 
 /**
- * Retrieves the current session from the request.
+ * Retrieves the current session on the server side.
  *
  * @param request - The current request object
  * @param config - Auth.js configuration
  * @returns The session object or null
+ *
+ * @example
+ * ```ts
+ * import { getSession } from '@zitadel/qwik-auth';
+ * import { authConfig } from '~/lib/auth';
+ *
+ * const session = await getSession(request, authConfig);
+ * ```
  */
 export async function getSession(
   request: Request,
@@ -76,7 +84,8 @@ export async function getSession(
  * Returns `{ onRequest, useSession, useSignIn, useSignOut }` that should be
  * exported from your `plugin@auth.ts` route.
  *
- * @param config - Auth.js configuration object
+ * @param config - Auth.js configuration
+ * @returns Object containing onRequest, useSession, useSignIn, and useSignOut
  *
  * @example
  * ```ts
