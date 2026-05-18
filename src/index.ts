@@ -17,6 +17,8 @@ export type {
 
 /**
  * Qwik City RequestEventCommon-compatible type.
+ *
+ * @public
  */
 export type RequestEventCommon = {
   request: Request;
@@ -31,6 +33,8 @@ export type RequestEventCommon = {
 
 /**
  * Auth.js configuration for Qwik applications.
+ *
+ * @public
  */
 export type QwikAuthConfig = Omit<AuthConfig, 'raw'>;
 
@@ -44,10 +48,12 @@ export type QwikAuthConfig = Omit<AuthConfig, 'raw'>;
  * @example
  * ```ts
  * import { getSession } from '@zitadel/qwik-auth';
- * import { authConfig } from '~/lib/auth';
+ * import { authOptions } from '~/lib/auth';
  *
- * const session = await getSession(request, authConfig);
+ * const session = await getSession(request, authOptions);
  * ```
+ *
+ * @public
  */
 export async function getSession(
   request: Request,
@@ -86,6 +92,8 @@ export async function getSession(
  *
  * @param config - Auth.js configuration
  * @returns Object containing onRequest, useSession, useSignIn, and useSignOut
+ *
+ * @public
  *
  * @example
  * ```ts
