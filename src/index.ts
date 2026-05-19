@@ -5,6 +5,15 @@ import {
   createActionURL,
 } from '@auth/core';
 import type { Session } from '@auth/core/types';
+import { isServer } from '@builder.io/qwik/build';
+import { implicit$FirstArg, type QRL } from '@builder.io/qwik';
+import {
+  globalAction$,
+  routeLoader$,
+  z,
+  zod$,
+  type RequestEventCommon,
+} from '@builder.io/qwik-city';
 
 export { AuthError, CredentialsSignin } from '@auth/core/errors';
 export type {
@@ -15,21 +24,7 @@ export type {
   User,
 } from '@auth/core/types';
 
-/**
- * Qwik City RequestEventCommon-compatible type.
- *
- * @public
- */
-export type RequestEventCommon = {
-  request: Request;
-  url: URL;
-  env: {
-    get(key: string): string | undefined;
-  };
-  send(statusCode: number, body: string): void;
-  redirect(statusCode: number, url: string): never;
-  headers: Headers;
-};
+export type { RequestEventCommon };
 
 /**
  * Auth.js configuration for Qwik applications.
@@ -37,24 +32,6 @@ export type RequestEventCommon = {
  * @public
  */
 export type QwikAuthConfig = Omit<AuthConfig, 'raw'>;
-
-/**
- * Either a static {@link QwikAuthConfig} object or a request-scoped factory
- * `(event) => QwikAuthConfig`.
- *
- * The factory form defers config evaluation until request time. In Qwik this
- * is the critical pattern that keeps server-only imports (e.g. `@auth/core`
- * → `@panva/hkdf` → `node:crypto`) out of the client bundle: because
- * `plugin@auth.ts` is loaded by both the client and server entries, an
- * eagerly-evaluated config pulls every transitive import into the client
- * graph. The factory body is evaluated only at request time on the server,
- * so the heavy import subgraph stays server-only.
- *
- * @public
- */
-export type QwikAuthConfigOrFactory =
-  | QwikAuthConfig
-  | ((event: RequestEventCommon) => QwikAuthConfig);
 
 /**
  * Retrieves the current session on the server side.
@@ -97,31 +74,111 @@ export async function getSession(
 
   const { status } = response;
   const data = (await response.json()) as Record<string, unknown> | null;
-  if (!data || !Object.keys(data).length) return null;
-  if (status === 200) return data as unknown as Session;
+  if (!data || !Object.keys(data).length) {
+    return null;
+  }
+  if (status === 200) {
+    return data as unknown as Session;
+  }
   throw new Error((data as { message?: string }).message ?? 'Session error');
+}
+
+/**
+ * Internal factory consumed by {@link QwikAuth$}. Accepts a QRL so its
+ * body stays server-only and Qwik's optimizer can drop `@auth/core`
+ * from the client bundle.
+ *
+ * @internal
+ */
+export function QwikAuthQrl(
+  authOptions: QRL<(event: RequestEventCommon) => QwikAuthConfig>,
+) {
+  const useSignIn = globalAction$(
+    async ({ providerId, redirectTo, options }, req) => {
+      if (!isServer) {
+        return;
+      }
+      const config = await authOptions(req);
+      config.basePath ??= '/api/auth';
+      setEnvDefaults(process.env, config);
+      const basePath = (config.basePath ?? '/api/auth').replace(/\/$/, '');
+      const params = new URLSearchParams();
+      const callback = options?.redirectTo ?? redirectTo;
+      if (callback) {
+        params.set('callbackUrl', callback);
+      }
+      const paramStr = params.toString();
+      const url = providerId
+        ? `${basePath}/signin/${providerId}${paramStr ? `?${paramStr}` : ''}`
+        : `${basePath}/signin${paramStr ? `?${paramStr}` : ''}`;
+      throw req.redirect(302, url);
+    },
+    zod$({
+      providerId: z.string().optional(),
+      redirectTo: z.string().optional(),
+      options: z
+        .object({ redirectTo: z.string() })
+        .passthrough()
+        .partial()
+        .optional(),
+    }),
+  );
+
+  const useSignOut = globalAction$(
+    async ({ redirectTo }, req) => {
+      if (!isServer) {
+        return;
+      }
+      const config = await authOptions(req);
+      config.basePath ??= '/api/auth';
+      setEnvDefaults(process.env, config);
+      const basePath = (config.basePath ?? '/api/auth').replace(/\/$/, '');
+      const params = new URLSearchParams();
+      if (redirectTo) {
+        params.set('callbackUrl', redirectTo);
+      }
+      const paramStr = params.toString();
+      const url = `${basePath}/signout${paramStr ? `?${paramStr}` : ''}`;
+      throw req.redirect(302, url);
+    },
+    zod$({ redirectTo: z.string().optional() }),
+  );
+
+  const useSession = routeLoader$((req) => {
+    return req.sharedMap.get('session') as Session | null;
+  });
+
+  const onRequest = async (req: RequestEventCommon) => {
+    if (!isServer) {
+      return;
+    }
+    const config = await authOptions(req);
+    config.basePath ??= '/api/auth';
+    setEnvDefaults(process.env, config);
+    const basePath = (config.basePath ?? '/api/auth').replace(/\/$/, '');
+    if (req.url.pathname.startsWith(basePath + '/')) {
+      const response = await Auth(req.request, config);
+      req.send(response.status, await response.text());
+      return;
+    }
+    const session = await getSession(req.request, config);
+    req.sharedMap.set('session', session);
+  };
+
+  return { onRequest, useSession, useSignIn, useSignOut };
 }
 
 /**
  * Creates a QwikAuth handler set.
  *
- * Accepts either a {@link QwikAuthConfig} object or a request-scoped
- * factory `(event) => QwikAuthConfig`. The factory form is the canonical
- * Qwik pattern: it defers config evaluation to request time, which keeps
- * server-only imports (e.g. `@auth/core` → `@panva/hkdf` → `node:crypto`)
- * out of the client bundle.
- *
- * Returns `{ onRequest, useSession, useSignIn, useSignOut }` that should be
- * exported from your `plugin@auth.ts` route.
- *
- * @param rawConfig - Auth.js configuration object or factory function
- * @returns Object containing onRequest, useSession, useSignIn, and useSignOut
- *
- * @public
+ * Wraps the auth-config factory in a Qwik QRL so its body stays
+ * server-only. The returned handlers (`onRequest`, `useSession`,
+ * `useSignIn`, `useSignOut`) use Qwik primitives (`globalAction$`,
+ * `routeLoader$`) so `@auth/core` and its Node-only dependency graph
+ * are dropped from the client bundle by Qwik's optimizer.
  *
  * @example
  * ```ts
- * // src/routes/plugin@auth.ts — factory form (recommended for Qwik)
  * import { QwikAuth$ } from '@zitadel/qwik-auth';
  * import { getAuthConfig } from '~/lib/auth';
  * import type { RequestEventCommon } from '@builder.io/qwik-city';
@@ -134,93 +191,6 @@ export async function getSession(
  * );
  * ```
  *
- * @example
- * ```ts
- * // src/routes/plugin@auth.ts — object form (only safe when no
- * // server-only imports are reachable from `getAuthConfig`)
- * import { QwikAuth$ } from '@zitadel/qwik-auth';
- * import { getAuthConfig } from '~/lib/auth';
- *
- * export const { onRequest, useSession, useSignIn, useSignOut } = QwikAuth$(
- *   getAuthConfig((key) => process.env[key]),
- * );
- * ```
+ * @public
  */
-export function QwikAuth$(rawConfig: QwikAuthConfigOrFactory): {
-  onRequest: (event: RequestEventCommon) => Promise<void>;
-  useSession: (event: RequestEventCommon) => Promise<Session | null>;
-  useSignIn: (
-    provider?: string,
-    options?: { redirectTo?: string },
-  ) => Promise<void>;
-  useSignOut: (options?: { redirectTo?: string }) => Promise<void>;
-} {
-  function resolveConfig(event: RequestEventCommon): QwikAuthConfig {
-    const c = typeof rawConfig === 'function' ? rawConfig(event) : rawConfig;
-    c.basePath ??= '/api/auth';
-    setEnvDefaults(process.env, c);
-    return c;
-  }
-
-  function defaultBasePath(): string {
-    if (typeof rawConfig === 'function') return '/api/auth';
-    return (rawConfig.basePath ?? '/api/auth').replace(/\/$/, '');
-  }
-
-  async function onRequest(event: RequestEventCommon): Promise<void> {
-    const config = resolveConfig(event);
-    const basePath = (config.basePath ?? '/api/auth').replace(/\/$/, '');
-    if (!event.url.pathname.startsWith(basePath + '/')) {
-      return;
-    }
-    const response = await Auth(event.request, config);
-    event.send(response.status, await response.text());
-  }
-
-  async function useSession(
-    event: RequestEventCommon,
-  ): Promise<Session | null> {
-    const config = resolveConfig(event);
-    return getSession(event.request, config);
-  }
-
-  async function useSignIn(
-    provider?: string,
-    options: { redirectTo?: string } = {},
-  ): Promise<void> {
-    const basePath = defaultBasePath();
-    const params = new URLSearchParams();
-    if (options.redirectTo) {
-      params.set('callbackUrl', options.redirectTo);
-    }
-    const paramStr = params.toString();
-    const url = provider
-      ? `${basePath}/signin/${provider}${paramStr ? `?${paramStr}` : ''}`
-      : `${basePath}/signin${paramStr ? `?${paramStr}` : ''}`;
-    if (typeof window !== 'undefined') {
-      window.location.href = url;
-    }
-  }
-
-  async function useSignOut(
-    options: { redirectTo?: string } = {},
-  ): Promise<void> {
-    const basePath = defaultBasePath();
-    const params = new URLSearchParams();
-    if (options.redirectTo) {
-      params.set('callbackUrl', options.redirectTo);
-    }
-    const paramStr = params.toString();
-    const url = `${basePath}/signout${paramStr ? `?${paramStr}` : ''}`;
-    if (typeof window !== 'undefined') {
-      window.location.href = url;
-    }
-  }
-
-  return {
-    onRequest,
-    useSession,
-    useSignIn,
-    useSignOut,
-  };
-}
+export const QwikAuth$ = implicit$FirstArg(QwikAuthQrl);

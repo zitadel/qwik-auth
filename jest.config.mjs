@@ -38,6 +38,9 @@ export default {
   extensionsToTreatAsEsm: ['.ts', '.tsx', '.mts'],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
+    '^@builder\\.io/qwik/build$': '<rootDir>/test/__mocks__/qwik-build.ts',
+    '^@builder\\.io/qwik$': '<rootDir>/test/__mocks__/qwik.ts',
+    '^@builder\\.io/qwik-city$': '<rootDir>/test/__mocks__/qwik-city.ts',
   },
   reporters: [
     'default',
