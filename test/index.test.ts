@@ -16,13 +16,6 @@ describe('Qwik Auth Package', () => {
       expect(typeof QwikAuthQrl).toBe('function');
     });
 
-    it('should export getSession as a function', async () => {
-      const { getSession } = await import('../src/index.js');
-
-      expect(getSession).toBeDefined();
-      expect(typeof getSession).toBe('function');
-    });
-
     it('should export AuthError', async () => {
       const { AuthError } = await import('../src/index.js');
 
@@ -105,14 +98,6 @@ describe('Qwik Auth Package', () => {
       const { useSignOut } = QwikAuthQrl(factory);
 
       expect(typeof useSignOut).toBe('function');
-    });
-  });
-
-  describe('getSession export signature', () => {
-    it('should accept 2 parameters (request, config)', async () => {
-      const { getSession } = await import('../src/index.js');
-
-      expect(getSession.length).toBe(2);
     });
   });
 

@@ -3,16 +3,17 @@
   "description": "A comprehensive Auth.js integration for Qwik City applications with TypeScript support and session management",
   "version": "0.1.0",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "dist/index.qwik.js",
   "types": "dist/index.d.ts",
+  "qwik": "./dist/index.qwik.js",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.qwik.js"
     },
     "./client": {
       "types": "./dist/client.d.ts",
-      "import": "./dist/client.js"
+      "import": "./dist/client.qwik.js"
     },
     "./adapters": {
       "types": "./dist/adapter.d.ts"
@@ -35,7 +36,7 @@
     "url": "https://github.com/zitadel"
   },
   "scripts": {
-    "prepack": "tsc",
+    "prepack": "npm run build",
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "jest --verbose --config=jest.config.mjs --runInBand --passWithNoTests",
     "test:watch": "npm run test:unit -- --watch",
@@ -43,7 +44,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "prepare": "npm run build",
-    "build": "tsup",
+    "build": "vite build --mode lib",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
@@ -78,9 +79,10 @@
     "prettier": "3.6.2",
     "semantic-release": "^25.0.3",
     "ts-jest": "29.4.0",
-    "tsup": "^8.5.0",
     "typedoc": "^0.28.7",
     "typescript": "^5.9.3",
+    "vite": "^7.3.2",
+    "vite-plugin-dts": "^5.0.0",
     "@playwright/test": "^1.52.0",
     "testcontainers": "^11.12.0"
   },

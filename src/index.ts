@@ -3,8 +3,9 @@ import {
   type AuthConfig,
   setEnvDefaults,
   createActionURL,
+  isAuthAction,
 } from '@auth/core';
-import type { Session } from '@auth/core/types';
+import type { AuthAction, Session } from '@auth/core/types';
 import { isServer } from '@builder.io/qwik/build';
 import { implicit$FirstArg, type QRL } from '@builder.io/qwik';
 import {
@@ -34,23 +35,16 @@ export type { RequestEventCommon };
 export type QwikAuthConfig = Omit<AuthConfig, 'raw'>;
 
 /**
- * Retrieves the current session on the server side.
+ * Server-only helper: fetches the current session by issuing a synthetic
+ * GET against the Auth.js session endpoint. Used internally by
+ * {@link QwikAuthQrl}'s `onRequest` middleware. Not exported from the
+ * package surface because its body imports `@auth/core` at module top
+ * level; exporting it would defeat tree-shaking and pull the Auth.js
+ * runtime into the consumer's client bundle.
  *
- * @param request - The current request object
- * @param config - Auth.js configuration
- * @returns The session object or null
- *
- * @example
- * ```ts
- * import { getSession } from '@zitadel/qwik-auth';
- * import { authOptions } from '~/lib/auth';
- *
- * const session = await getSession(request, authOptions);
- * ```
- *
- * @public
+ * @internal
  */
-export async function getSession(
+async function getSession(
   request: Request,
   config: QwikAuthConfig,
 ): Promise<Session | null> {
@@ -156,10 +150,21 @@ export function QwikAuthQrl(
     config.basePath ??= '/api/auth';
     setEnvDefaults(process.env, config);
     const basePath = (config.basePath ?? '/api/auth').replace(/\/$/, '');
-    if (req.url.pathname.startsWith(basePath + '/')) {
-      const response = await Auth(req.request, config);
-      req.send(response.status, await response.text());
-      return;
+    // Match upstream `@auth/qwik`: only delegate to Auth.js when the
+    // first path segment after basePath is a recognised Auth.js action
+    // (signin/signout/callback/csrf/providers/session/error/verify-request).
+    // This lets consumers add their own routes under the same basePath
+    // (e.g. /api/auth/logout/callback for OIDC RP-initiated logout)
+    // without the SDK intercepting them.
+    const action = req.url.pathname
+      .slice(basePath.length + 1)
+      .split('/')[0] as AuthAction;
+    if (isAuthAction(action) && req.url.pathname.startsWith(basePath + '/')) {
+      // Forward the full Auth.js Response — status, headers (including
+      // Set-Cookie and Location for redirects), and body. `req.send`
+      // accepts a Response and copies these fields onto the outgoing
+      // reply; `throw` short-circuits further middleware/loaders.
+      throw req.send(await Auth(req.request, config));
     }
     const session = await getSession(req.request, config);
     req.sharedMap.set('session', session);
