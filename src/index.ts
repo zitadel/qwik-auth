@@ -142,6 +142,56 @@ export function QwikAuthQrl(
     return req.sharedMap.get('session') as Session | null;
   });
 
+  /**
+   * Server-side helper to start the Auth.js sign-in flow.
+   *
+   * Unlike the other SDKs in this family, `event` must be passed
+   * first: the SDK's config is request-scoped (resolved by the QRL
+   * factory on each invocation) so the request context is needed to
+   * compute the active `basePath`.
+   *
+   * Returns a `Response.redirect()` matching the canonical shape
+   * used by the other SDK families.
+   *
+   * @public
+   */
+  async function signIn(
+    event: RequestEventCommon,
+    provider?: string,
+    options: { redirectTo?: string } = {},
+  ): Promise<Response> {
+    const config = await authOptions(event);
+    config.basePath ??= '/api/auth';
+    const basePath = (config.basePath ?? '/api/auth').replace(/\/$/, '');
+    const params = new URLSearchParams();
+    if (options.redirectTo) params.set('callbackUrl', options.redirectTo);
+    const paramStr = params.toString();
+    const url = provider
+      ? `${basePath}/signin/${provider}${paramStr ? `?${paramStr}` : ''}`
+      : `${basePath}/signin${paramStr ? `?${paramStr}` : ''}`;
+    return Response.redirect(url, 302);
+  }
+
+  /**
+   * Server-side helper to start the Auth.js sign-out flow. Same
+   * request-scoping caveat as {@link signIn}.
+   *
+   * @public
+   */
+  async function signOut(
+    event: RequestEventCommon,
+    options: { redirectTo?: string } = {},
+  ): Promise<Response> {
+    const config = await authOptions(event);
+    config.basePath ??= '/api/auth';
+    const basePath = (config.basePath ?? '/api/auth').replace(/\/$/, '');
+    const params = new URLSearchParams();
+    if (options.redirectTo) params.set('callbackUrl', options.redirectTo);
+    const paramStr = params.toString();
+    const url = `${basePath}/signout${paramStr ? `?${paramStr}` : ''}`;
+    return Response.redirect(url, 302);
+  }
+
   const onRequest = async (req: RequestEventCommon) => {
     if (!isServer) {
       return;
@@ -170,7 +220,7 @@ export function QwikAuthQrl(
     req.sharedMap.set('session', session);
   };
 
-  return { onRequest, useSession, useSignIn, useSignOut };
+  return { onRequest, useSession, useSignIn, useSignOut, signIn, signOut };
 }
 
 /**
