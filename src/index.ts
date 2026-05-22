@@ -150,8 +150,8 @@ export function QwikAuthQrl(
    * factory on each invocation) so the request context is needed to
    * compute the active `basePath`.
    *
-   * Returns a `Response.redirect()` matching the canonical shape
-   * used by the other SDK families.
+   * Returns a `Response` with a 302 + Location header, matching the
+   * canonical shape used by the other SDK families.
    *
    * @public
    */
@@ -160,16 +160,46 @@ export function QwikAuthQrl(
     provider?: string,
     options: { redirectTo?: string } = {},
   ): Promise<Response> {
+    // The `provider` argument is intentionally ignored on the server side:
+    // Auth.js's per-provider sign-in endpoint (/api/auth/signin/{provider})
+    // requires a POST with a CSRF token, which a 302 redirect cannot
+    // produce. Server-side signIn always routes through the chooser
+    // (/api/auth/signin); when `pages.signIn` is configured, Auth.js then
+    // bounces to the consumer's custom sign-in page (where the POST form
+    // + CSRF live). The `provider` arg is kept in the signature for
+    // parity with client-side signIn() callers.
+    void provider;
+    // Use a raw Response rather than Response.redirect(): the static
+    // Response.redirect() method validates the URL and rejects relative
+    // ones, but we don't have the request origin in this scope. Browsers
+    // accept relative Location headers per RFC 7231 §7.1.2.
+    return new Response(null, {
+      status: 302,
+      headers: { Location: await signInUrl(event, options) },
+    });
+  }
+
+  /**
+   * Returns the relative URL of the sign-in endpoint, with `callbackUrl`
+   * appended when `redirectTo` is provided. Useful when the framework's
+   * native redirect helper takes a URL string (e.g. `throw req.redirect(302, url)`).
+   *
+   * Like {@link signIn}, this takes the request event first because the SDK's
+   * config is request-scoped (resolved by the QRL factory on each invocation).
+   *
+   * @public
+   */
+  async function signInUrl(
+    event: RequestEventCommon,
+    options: { redirectTo?: string } = {},
+  ): Promise<string> {
     const config = await authOptions(event);
     config.basePath ??= '/api/auth';
     const basePath = (config.basePath ?? '/api/auth').replace(/\/$/, '');
     const params = new URLSearchParams();
     if (options.redirectTo) params.set('callbackUrl', options.redirectTo);
     const paramStr = params.toString();
-    const url = provider
-      ? `${basePath}/signin/${provider}${paramStr ? `?${paramStr}` : ''}`
-      : `${basePath}/signin${paramStr ? `?${paramStr}` : ''}`;
-    return Response.redirect(url, 302);
+    return `${basePath}/signin${paramStr ? `?${paramStr}` : ''}`;
   }
 
   /**
@@ -182,14 +212,30 @@ export function QwikAuthQrl(
     event: RequestEventCommon,
     options: { redirectTo?: string } = {},
   ): Promise<Response> {
+    return new Response(null, {
+      status: 302,
+      headers: { Location: await signOutUrl(event, options) },
+    });
+  }
+
+  /**
+   * Returns the relative URL of the sign-out endpoint, with `callbackUrl`
+   * appended when `redirectTo` is provided. Same request-scoping caveat
+   * as {@link signInUrl}.
+   *
+   * @public
+   */
+  async function signOutUrl(
+    event: RequestEventCommon,
+    options: { redirectTo?: string } = {},
+  ): Promise<string> {
     const config = await authOptions(event);
     config.basePath ??= '/api/auth';
     const basePath = (config.basePath ?? '/api/auth').replace(/\/$/, '');
     const params = new URLSearchParams();
     if (options.redirectTo) params.set('callbackUrl', options.redirectTo);
     const paramStr = params.toString();
-    const url = `${basePath}/signout${paramStr ? `?${paramStr}` : ''}`;
-    return Response.redirect(url, 302);
+    return `${basePath}/signout${paramStr ? `?${paramStr}` : ''}`;
   }
 
   const onRequest = async (req: RequestEventCommon) => {
@@ -220,7 +266,16 @@ export function QwikAuthQrl(
     req.sharedMap.set('session', session);
   };
 
-  return { onRequest, useSession, useSignIn, useSignOut, signIn, signOut };
+  return {
+    onRequest,
+    useSession,
+    useSignIn,
+    useSignOut,
+    signIn,
+    signInUrl,
+    signOut,
+    signOutUrl,
+  };
 }
 
 /**
