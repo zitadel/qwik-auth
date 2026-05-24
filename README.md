@@ -194,10 +194,6 @@ export function getAuthConfig(env: (key: string) => string | undefined): QwikAut
 
 ## Known Issues
 
-- **Environment Variables:** `QwikAuth$` reads environment variables via
-  `process.env` at module initialization time. Client-side env vars must be
-  prefixed with `VITE_`. Pass secrets as config properties to keep them
-  server-side only.
 - **Environment Configuration:** The integration relies on `AUTH_SECRET` and,
   in many hosting scenarios, `AUTH_TRUST_HOST`. Ensure these are correctly set
   in your environment for production.
