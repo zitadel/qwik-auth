@@ -1,6 +1,6 @@
 {
   "name": "@zitadel/qwik-auth",
-  "description": "A comprehensive Auth.js integration for Qwik City applications with TypeScript support and session management",
+  "description": "A comprehensive authentication integration for Qwik City applications with TypeScript support and session management",
   "version": "0.1.0",
   "type": "module",
   "main": "dist/index.qwik.js",
@@ -87,15 +87,19 @@
     "testcontainers": "^12.0.0"
   },
   "keywords": [
-    "qwik",
-    "qwik-city",
     "auth",
     "authentication",
+    "authorization",
+    "authn",
+    "authz",
     "oauth",
+    "oidc",
     "authjs",
     "jwt",
-    "@auth",
-    "@auth/core"
+    "jwks",
+    "pkce",
+    "qwik",
+    "qwik-city"
   ],
   "private": false,
   "homepage": "https://github.com/zitadel/qwik-auth",
