@@ -1,30 +1,28 @@
-# Qwik Auth.js
+# Qwik Auth
 
-A [Qwik City](https://qwik.dev/docs/qwikcity/) integration for
-[Auth.js](https://authjs.dev/) that provides seamless authentication with
+A [Qwik City](https://qwik.dev/docs/qwikcity/) integration that provides seamless authentication with
 multiple providers, session management, and Qwik City-native plugin patterns.
 
-This integration brings the power and flexibility of Auth.js to Qwik City
+This integration brings the power and flexibility of OAuth to Qwik City
 applications with full TypeScript support, SSR-friendly HTTP handling,
 and Qwik City-native patterns including route plugins and server request events.
 
 ### Why?
 
 Modern web applications require robust, secure, and flexible authentication
-systems. While Auth.js provides excellent authentication capabilities,
-integrating it with Qwik City applications requires careful consideration of
+systems. Integrating OAuth and session management with Qwik Cityapplications requires careful consideration of
 framework patterns, server-side rendering, and TypeScript integration.
 
 However, a direct integration isn't always straightforward. Different types
 of applications or deployment scenarios might warrant different approaches:
 
-- **Plugin Integration:** Auth.js operates at the HTTP level, while Qwik City
+- **Plugin Integration:** OAuth and auth flows operate at the HTTP level, while Qwik City
   uses route plugins (`plugin@*.ts`) and `RequestEventCommon` objects. A proper
   integration should bridge this gap by providing a plugin-compatible `onRequest`
   handler that intercepts auth routes transparently.
 - **HTTP Request Handling:** Qwik City's route plugins receive `RequestEventCommon`
   objects with environment access via `event.env.get()`. This integration wires
-  Auth.js into the Qwik request lifecycle without manual response plumbing.
+  OAuth into the Qwik request lifecycle without manual response plumbing.
 - **Session and Request Lifecycle:** Proper session handling in Qwik City
   requires SSR-friendly utilities compatible with Qwik's resumability model
   and server-side data loading patterns.
@@ -33,7 +31,7 @@ of applications or deployment scenarios might warrant different approaches:
   primitive for protecting routes and accessing user data.
 
 This integration, `@zitadel/qwik-auth`, aims to provide the flexibility to
-handle such scenarios. It allows you to leverage the full Auth.js ecosystem
+handle such scenarios. It allows you to leverage the full OAuth provider ecosystem
 while maintaining Qwik City best practices, ultimately leading to a more
 effective and less burdensome authentication implementation.
 
@@ -47,41 +45,31 @@ npm install @zitadel/qwik-auth @auth/core
 
 ## Usage
 
-To use this integration, call `QwikAuth$()` with a plain Auth.js config object
+To use this integration, call `QwikAuth$()` with a plain OAuth config object
 and export the resulting `onRequest`, `useSession`, `useSignIn`, and
 `useSignOut` from a `plugin@auth.ts` route file.
 
-First, create your auth configuration:
-
-```ts
-// src/lib/auth.ts
-import type { QwikAuthConfig } from '@zitadel/qwik-auth';
-import Zitadel from '@auth/core/providers/zitadel';
-
-export function getAuthConfig(env: (key: string) => string | undefined): QwikAuthConfig {
-  return {
-    providers: [
-      Zitadel({
-        clientId: env('ZITADEL_CLIENT_ID'),
-        clientSecret: env('ZITADEL_CLIENT_SECRET'),
-        issuer: env('ZITADEL_DOMAIN'),
-      }),
-    ],
-    secret: env('AUTH_SECRET'),
-    trustHost: true,
-  };
-}
-```
-
-Then export the plugin handlers:
+Export the plugin handlers from `plugin@auth.ts`. `QwikAuth$` takes a
+request-scoped factory `(event) => QwikAuthConfig` which the SDK wraps
+in a QRL so server-only imports never enter the client bundle:
 
 ```ts
 // src/routes/plugin@auth.ts
 import { QwikAuth$ } from '@zitadel/qwik-auth';
-import { getAuthConfig } from '~/lib/auth';
+import Zitadel from '@auth/core/providers/zitadel';
 
 export const { onRequest, useSession, useSignIn, useSignOut } = QwikAuth$(
-  getAuthConfig((key) => process.env[key])
+  ({ env }) => ({
+    providers: [
+      Zitadel({
+        clientId: env.get('ZITADEL_CLIENT_ID'),
+        clientSecret: env.get('ZITADEL_CLIENT_SECRET'),
+        issuer: env.get('ZITADEL_DOMAIN'),
+      }),
+    ],
+    secret: env.get('AUTH_SECRET'),
+    trustHost: true,
+  }),
 );
 ```
 
@@ -134,13 +122,20 @@ Prefer direct session access in a server loader? Use `getSession()`:
 // src/routes/profile/index.tsx
 import { routeLoader$ } from '@builder.io/qwik-city';
 import { getSession } from '@zitadel/qwik-auth';
-import { getAuthConfig } from '~/lib/auth';
+import Zitadel from '@auth/core/providers/zitadel';
 
 export const useProfileData = routeLoader$(async (event) => {
-  const session = await getSession(
-    event.request,
-    getAuthConfig((key) => process.env[key]),
-  );
+  const session = await getSession(event.request, {
+    providers: [
+      Zitadel({
+        clientId: event.env.get('ZITADEL_CLIENT_ID'),
+        clientSecret: event.env.get('ZITADEL_CLIENT_SECRET'),
+        issuer: event.env.get('ZITADEL_DOMAIN'),
+      }),
+    ],
+    secret: event.env.get('AUTH_SECRET'),
+    trustHost: true,
+  });
   if (!session) throw event.redirect(302, '/');
   return session;
 });
@@ -148,29 +143,29 @@ export const useProfileData = routeLoader$(async (event) => {
 
 ##### Example: Advanced Configuration with Multiple Providers
 
-This example shows how to use the integration with multiple Auth.js
+This example shows how to use the integration with multiple OAuth
 providers and custom session configuration:
 
 ```ts
-// src/lib/auth.ts
-import type { QwikAuthConfig } from '@zitadel/qwik-auth';
+// src/routes/plugin@auth.ts
+import { QwikAuth$ } from '@zitadel/qwik-auth';
 import Zitadel from '@auth/core/providers/zitadel';
 import Google from '@auth/core/providers/google';
 
-export function getAuthConfig(env: (key: string) => string | undefined): QwikAuthConfig {
-  return {
+export const { onRequest, useSession, useSignIn, useSignOut } = QwikAuth$(
+  ({ env }) => ({
     providers: [
       Zitadel({
-        clientId: env('ZITADEL_CLIENT_ID') ?? '',
-        clientSecret: env('ZITADEL_CLIENT_SECRET') ?? '',
-        issuer: env('ZITADEL_DOMAIN') ?? '',
+        clientId: env.get('ZITADEL_CLIENT_ID'),
+        clientSecret: env.get('ZITADEL_CLIENT_SECRET'),
+        issuer: env.get('ZITADEL_DOMAIN'),
       }),
       Google({
-        clientId: env('GOOGLE_CLIENT_ID') ?? '',
-        clientSecret: env('GOOGLE_CLIENT_SECRET') ?? '',
+        clientId: env.get('GOOGLE_CLIENT_ID'),
+        clientSecret: env.get('GOOGLE_CLIENT_SECRET'),
       }),
     ],
-    secret: env('AUTH_SECRET'),
+    secret: env.get('AUTH_SECRET'),
     trustHost: true,
     session: {
       strategy: 'jwt',
@@ -188,8 +183,8 @@ export function getAuthConfig(env: (key: string) => string | undefined): QwikAut
         return session;
       },
     },
-  };
-}
+  }),
+);
 ```
 
 ## Known Issues
@@ -203,7 +198,7 @@ export function getAuthConfig(env: (key: string) => string | undefined): QwikAut
 - **Callback URLs:** OAuth providers must be configured with the correct
   callback URL: `[origin]/api/auth/callback/[provider]`.
 - **Type Augmentation:** If you attach additional properties (e.g., roles) to
-  the Auth.js user object, extend your app's types accordingly so consumers of
+  the user session object, extend your app's types accordingly so consumers of
   `session.user` remain type-safe.
 - **Redirect Semantics:** OAuth providers expect real browser navigations during
   sign-in. The `useSignIn` and `useSignOut` helpers handle this for you — avoid
@@ -212,12 +207,8 @@ export function getAuthConfig(env: (key: string) => string | undefined): QwikAut
 
 ## Useful links
 
-- **[Auth.js](https://authjs.dev/):** The authentication library that this
-  integration is built upon.
 - **[Qwik City](https://qwik.dev/docs/qwikcity/):** The framework this
   integration targets.
-- **[Auth.js Providers](https://authjs.dev/getting-started/providers):**
-  Complete list of supported authentication providers.
 
 ## Contributing
 
