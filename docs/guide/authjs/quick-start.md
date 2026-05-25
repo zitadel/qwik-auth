@@ -1,6 +1,6 @@
 ---
 title: Quick Start
-group: Auth.js Provider
+group: OAuth Provider
 children:
   - ./qwik-auth-handler.md
   - ./session-data.md
@@ -9,9 +9,9 @@ children:
   - ./server-side/rest-api.md
 ---
 
-# Auth.js Quick Start
+# OAuth Quick Start
 
-This guide walks through setting up `@zitadel/qwik-auth` with the Auth.js
+This guide walks through setting up `@zitadel/qwik-auth` with the OAuth
 provider, suitable for OAuth, magic links, and credentials sign-in.
 
 ## Installation
@@ -45,7 +45,7 @@ export const { onRequest, useSession, useSignIn, useSignOut } = QwikAuth$(
 );
 ```
 
-The plugin auto-mounts the Auth.js REST endpoints under `/api/auth/*` and
+The plugin auto-mounts the OAuth REST endpoints under `/api/auth/*` and
 exposes `useSession` / `useSignIn$` / `useSignOut$` to your routes.
 
 ## Set the secret

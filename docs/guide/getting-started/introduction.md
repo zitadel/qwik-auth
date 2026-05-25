@@ -8,7 +8,7 @@ children:
 # Introduction
 
 `@zitadel/qwik-auth` is an open source library that provides authentication
-for Qwik City applications. It wraps [Auth.js](https://authjs.dev/)
+for Qwik City applications. It wraps auth
 (`@auth/core`) to bring OAuth, credentials, and magic-link authentication to
 Qwik with a native developer experience.
 

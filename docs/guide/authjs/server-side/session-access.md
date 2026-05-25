@@ -1,6 +1,6 @@
 ---
 title: Session Access
-group: Auth.js Provider
+group: OAuth Provider
 category: Server Side
 ---
 
@@ -41,5 +41,5 @@ export const onGet: RequestHandler = async (event) => {
 
 ## Return shape
 
-The session is the object Auth.js builds in the `session` callback, or
+The session is the object OAuth builds in the `session` callback, or
 `undefined` when no valid session exists.

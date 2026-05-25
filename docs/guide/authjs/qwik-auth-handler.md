@@ -1,11 +1,11 @@
 ---
 title: QwikAuth$ Factory
-group: Auth.js Provider
+group: OAuth Provider
 ---
 
 # QwikAuth$ Factory
 
-The `QwikAuth$()` factory wires up the Auth.js handler and returns Qwik
+The `QwikAuth$()` factory wires up the auth handler and returns Qwik
 City actions/loaders bound to your config. Call it once in
 `src/routes/plugin@auth.ts`:
 
