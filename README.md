@@ -10,7 +10,7 @@ and Qwik City-native patterns including route plugins and server request events.
 ### Why?
 
 Modern web applications require robust, secure, and flexible authentication
-systems. Integrating OAuth and session management with Qwik Cityapplications requires careful consideration of
+systems. Integrating OAuth and session management with Qwik City applications requires careful consideration of
 framework patterns, server-side rendering, and TypeScript integration.
 
 However, a direct integration isn't always straightforward. Different types

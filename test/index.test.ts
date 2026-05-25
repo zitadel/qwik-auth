@@ -101,6 +101,180 @@ describe('Qwik Auth Package', () => {
     });
   });
 
+  describe('signIn URL construction with default basePath /api/auth', () => {
+    it('should redirect to /api/auth/signin when a provider is given (provider ignored server-side)', async () => {
+      const { QwikAuthQrl } = await import('../src/index.js');
+
+      const factory = (() => ({
+        providers: [],
+        secret: 'test-secret',
+      })) as unknown as Parameters<typeof QwikAuthQrl>[0];
+      const { signIn } = QwikAuthQrl(factory);
+      const response = await signIn({} as never, 'zitadel');
+
+      expect(response.status).toBe(302);
+      expect(response.headers.get('location')).toBe('/api/auth/signin');
+    });
+
+    it('should redirect to /api/auth/signin when no provider is given', async () => {
+      const { QwikAuthQrl } = await import('../src/index.js');
+
+      const factory = (() => ({
+        providers: [],
+        secret: 'test-secret',
+      })) as unknown as Parameters<typeof QwikAuthQrl>[0];
+      const { signIn } = QwikAuthQrl(factory);
+      const response = await signIn({} as never);
+
+      expect(response.status).toBe(302);
+      expect(response.headers.get('location')).toBe('/api/auth/signin');
+    });
+
+    it('should append callbackUrl as redirectTo query param', async () => {
+      const { QwikAuthQrl } = await import('../src/index.js');
+
+      const factory = (() => ({
+        providers: [],
+        secret: 'test-secret',
+      })) as unknown as Parameters<typeof QwikAuthQrl>[0];
+      const { signIn } = QwikAuthQrl(factory);
+      const response = await signIn({} as never, 'zitadel', {
+        redirectTo: '/dashboard',
+      });
+
+      expect(response.status).toBe(302);
+      expect(response.headers.get('location')).toBe(
+        '/api/auth/signin?callbackUrl=%2Fdashboard',
+      );
+    });
+
+    it('should not append query string when redirectTo is not provided', async () => {
+      const { QwikAuthQrl } = await import('../src/index.js');
+
+      const factory = (() => ({
+        providers: [],
+        secret: 'test-secret',
+      })) as unknown as Parameters<typeof QwikAuthQrl>[0];
+      const { signIn } = QwikAuthQrl(factory);
+      const response = await signIn({} as never, 'zitadel', {});
+
+      expect(response.status).toBe(302);
+      expect(response.headers.get('location')).toBe('/api/auth/signin');
+    });
+  });
+
+  describe('signOut URL construction with default basePath /api/auth', () => {
+    it('should redirect to /api/auth/signout', async () => {
+      const { QwikAuthQrl } = await import('../src/index.js');
+
+      const factory = (() => ({
+        providers: [],
+        secret: 'test-secret',
+      })) as unknown as Parameters<typeof QwikAuthQrl>[0];
+      const { signOut } = QwikAuthQrl(factory);
+      const response = await signOut({} as never);
+
+      expect(response.status).toBe(302);
+      expect(response.headers.get('location')).toBe('/api/auth/signout');
+    });
+
+    it('should append callbackUrl as redirectTo query param on signOut', async () => {
+      const { QwikAuthQrl } = await import('../src/index.js');
+
+      const factory = (() => ({
+        providers: [],
+        secret: 'test-secret',
+      })) as unknown as Parameters<typeof QwikAuthQrl>[0];
+      const { signOut } = QwikAuthQrl(factory);
+      const response = await signOut({} as never, { redirectTo: '/' });
+
+      expect(response.status).toBe(302);
+      expect(response.headers.get('location')).toBe(
+        '/api/auth/signout?callbackUrl=%2F',
+      );
+    });
+
+    it('should not append query string when redirectTo is not provided', async () => {
+      const { QwikAuthQrl } = await import('../src/index.js');
+
+      const factory = (() => ({
+        providers: [],
+        secret: 'test-secret',
+      })) as unknown as Parameters<typeof QwikAuthQrl>[0];
+      const { signOut } = QwikAuthQrl(factory);
+      const response = await signOut({} as never, {});
+
+      expect(response.status).toBe(302);
+      expect(response.headers.get('location')).toBe('/api/auth/signout');
+    });
+  });
+
+  describe('Custom basePath support', () => {
+    it('should use custom basePath in signIn URL', async () => {
+      const { QwikAuthQrl } = await import('../src/index.js');
+
+      const factory = (() => ({
+        providers: [],
+        secret: 'test-secret',
+        basePath: '/custom-auth',
+      })) as unknown as Parameters<typeof QwikAuthQrl>[0];
+      const { signIn } = QwikAuthQrl(factory);
+      const response = await signIn({} as never, 'zitadel');
+
+      expect(response.status).toBe(302);
+      expect(response.headers.get('location')).toBe('/custom-auth/signin');
+    });
+
+    it('should use custom basePath in signOut URL', async () => {
+      const { QwikAuthQrl } = await import('../src/index.js');
+
+      const factory = (() => ({
+        providers: [],
+        secret: 'test-secret',
+        basePath: '/custom-auth',
+      })) as unknown as Parameters<typeof QwikAuthQrl>[0];
+      const { signOut } = QwikAuthQrl(factory);
+      const response = await signOut({} as never);
+
+      expect(response.status).toBe(302);
+      expect(response.headers.get('location')).toBe('/custom-auth/signout');
+    });
+
+    it('should strip trailing slash from custom basePath', async () => {
+      const { QwikAuthQrl } = await import('../src/index.js');
+
+      const factory = (() => ({
+        providers: [],
+        secret: 'test-secret',
+        basePath: '/custom-auth/',
+      })) as unknown as Parameters<typeof QwikAuthQrl>[0];
+      const { signIn } = QwikAuthQrl(factory);
+      const response = await signIn({} as never, 'zitadel');
+
+      expect(response.status).toBe(302);
+      expect(response.headers.get('location')).toBe('/custom-auth/signin');
+    });
+
+    it('should use custom basePath with redirectTo in signIn URL', async () => {
+      const { QwikAuthQrl } = await import('../src/index.js');
+
+      const factory = (() => ({
+        providers: [],
+        secret: 'test-secret',
+        basePath: '/myauth',
+      })) as unknown as Parameters<typeof QwikAuthQrl>[0];
+      const { signIn } = QwikAuthQrl(factory);
+      const response = await signIn({} as never, 'zitadel', {
+        redirectTo: '/profile',
+      });
+
+      expect(response.status).toBe(302);
+      expect(response.headers.get('location')).toBe(
+        '/myauth/signin?callbackUrl=%2Fprofile',
+      );
+    });
+  });
+
   describe('Adapter Entry Point', () => {
     it('should be importable', async () => {
       const module = await import('../src/adapter.js');
