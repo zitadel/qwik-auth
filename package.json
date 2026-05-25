@@ -84,7 +84,7 @@
     "vite": "^7.3.2",
     "vite-plugin-dts": "^5.0.0",
     "@playwright/test": "^1.52.0",
-    "testcontainers": "^11.12.0"
+    "testcontainers": "^12.0.0"
   },
   "keywords": [
     "qwik",
