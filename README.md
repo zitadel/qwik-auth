@@ -194,6 +194,9 @@ export function getAuthConfig(env: (key: string) => string | undefined): QwikAut
 
 ## Known Issues
 
+- **Plugin Route Required:** The integration must be wired in a Qwik City
+  plugin route file (`src/routes/plugin@auth.ts`). The `plugin@` prefix is
+  required for Qwik City to recognise it as a request plugin.
 - **Environment Configuration:** The integration relies on `AUTH_SECRET` and,
   in many hosting scenarios, `AUTH_TRUST_HOST`. Ensure these are correctly set
   in your environment for production.
