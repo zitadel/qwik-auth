@@ -1,3 +1,29 @@
+/**
+ * Auth.js integration for Qwik City.
+ *
+ * Provides authentication via Auth.js with support for OAuth providers,
+ * credentials, JWT sessions, and Qwik City's plugin / routeLoader$ /
+ * globalAction$ patterns.
+ *
+ * @packageDocumentation
+ *
+ * @example Basic usage
+ * ```ts
+ * // src/routes/plugin@auth.ts
+ * import { QwikAuth$ } from '@zitadel/qwik-auth';
+ * import Zitadel from '@auth/core/providers/zitadel';
+ *
+ * export const { onRequest, useSession, useSignIn, useSignOut } = QwikAuth$(
+ *   ({ env }) => ({
+ *     providers: [Zitadel({ clientId: env.get('ZITADEL_CLIENT_ID') })],
+ *     secret: env.get('AUTH_SECRET'),
+ *   }),
+ * );
+ * ```
+ *
+ * @public
+ */
+
 import {
   Auth,
   type AuthConfig,
