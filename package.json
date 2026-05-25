@@ -54,7 +54,6 @@
     "docs": "typedoc"
   },
   "peerDependencies": {
-    "@auth/core": ">=0.40.0",
     "@builder.io/qwik": ">=1.0.0",
     "@builder.io/qwik-city": ">=1.0.0"
   },
@@ -107,5 +106,8 @@
   "bugs": "https://github.com/zitadel/qwik-auth/issues",
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "@auth/core": "^0.40.0"
   }
 }
