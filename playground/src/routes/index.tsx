@@ -3,6 +3,7 @@ import type { DocumentHead } from '@builder.io/qwik-city';
 import { Header } from '~/components/Header';
 import { Footer } from '~/components/Footer';
 import { useSession } from '~/routes/plugin@auth';
+import { signIn } from '@zitadel/qwik-auth/client';
 
 // noinspection JSUnusedGlobalSymbols
 export default component$(() => {
@@ -114,19 +115,30 @@ export default component$(() => {
                     </div>
                   </div>
                   <div class="mb-6 flex flex-col gap-3">
+                    <button
+                      type="button"
+                      data-testid="signin-oauth"
+                      onClick$={() =>
+                        signIn('mock-oidc', { callbackUrl: '/profile' })
+                      }
+                      class="flex w-full cursor-pointer items-center justify-center rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition duration-200 hover:bg-blue-700"
+                    >
+                      Sign in with OAuth
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="signin-default"
+                      onClick$={() => signIn()}
+                      class="flex w-full cursor-pointer items-center justify-center rounded-lg border border-blue-600 px-4 py-3 font-semibold text-blue-600 transition duration-200 hover:bg-blue-50"
+                    >
+                      Sign in
+                    </button>
                     <a
                       href="/api/auth/signin"
                       data-testid="signin-credentials"
-                      class="flex w-full cursor-pointer items-center justify-center rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition duration-200 hover:bg-blue-700"
+                      class="flex w-full cursor-pointer items-center justify-center text-sm font-medium text-blue-600 transition duration-200 hover:text-blue-700"
                     >
                       Sign in with Credentials
-                    </a>
-                    <a
-                      href="/api/auth/signin"
-                      data-testid="signin-oauth"
-                      class="flex w-full cursor-pointer items-center justify-center rounded-lg border border-blue-600 px-4 py-3 font-semibold text-blue-600 transition duration-200 hover:bg-blue-50"
-                    >
-                      Sign in with OAuth
                     </a>
                   </div>
                   <div class="text-center">
